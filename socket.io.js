@@ -744,8 +744,8 @@ if (typeof window != 'undefined'){
 		} catch(e){}
 	
 		if (this._iframe.attachEvent){
-			iframe.onreadystatechange = function(){
-				if (self._iframe.readyState == 'complete') complete();
+			iframe.onload = function(){
+				complete();
 			};
 		} else {
 			this._iframe.onload = complete;
