@@ -1,17 +1,41 @@
-socket.io Client: Sockets for the rest of us
-============================================
+socket.io
+=========
 
-The `socket.io` client is basically a simple HTTP Socket interface implementation. It allows you to establish a realtime connection with a server (see `socket.io` server [here](http://github.com/RosePad/Socket.IO-node)), hiding the complexity of the different transports (WebSocket, Flash, forever iframe, XHR long polling, XHR multipart encoded, etc).
+#### Sockets for the rest of us
 
-## Features
+The `socket.io` client is basically a simple HTTP Socket interface implementation. It allows you to establish a realtime connection with a server (see `socket.io` server [here](http://github.com/LearnBoost/Socket.IO-node)), hiding the complexity of the different transports (WebSocket, Flash, forever iframe, XHR long polling, XHR multipart encoded, etc), while retaining a WebSocket-like API:
+
+	socket = new io.Socket('localhost');
+	socket.connect();
+	socket.on('connect', function(){
+		// connected
+	});
+	socket.on('message', function(data){
+		// data here
+	});
+	socket.send('some data');
+
+### Features
 
 - Supports 
 	- WebSocket
 	- Adobe Flash Socket
-	- ActiveX HTMLFile (IE) 
-	- Server-Sent Events (Opera)
+	- ActiveX HTMLFile (IE)
 	- XHR with multipart encoding
 	- XHR with long-polling
+	- JSONP polling (for cross-domain)
+
+- Tested on
+	- Safari 4
+	- Google Chrome 5
+	- Internet Explorer 6
+	- Internet Explorer 7
+	- Internet Explorer 8
+	- iPhone Safari
+	- iPad Safari
+	- Firefox 3
+	- Firefox 4 (Minefield)
+	- Opera 10.61
 	
 - ActionScript Socket is known not to work behind proxies, as it doesn't have access to the user agent proxy settings to implement the CONNECT HTTP method. If it fails, `socket.io` will try something else.
 	
@@ -19,41 +43,46 @@ The `socket.io` client is basically a simple HTTP Socket interface implementatio
 
 - Small. Closure Compiled with all deps: 5.82kb (gzipped).
 
-- Easy to use! See [socket.io-node](http://github.com/RosePad/Socket.IO-node) for the server to connect to.
+- Easy to use! See [socket.io-node](http://github.com/LearnBoost/Socket.IO-node) for the server to connect to.
 
-## How to use
-	
-In your head
-	
-	<script src="/path/to/socket.io.min.js">
-	<script>
-		io.setPath('/path/to/socket.io/');
-	</script>
-	
-In your code
+### How to use
 
 	socket = new io.Socket('localhost');
 	socket.connect();
 	socket.send('some data');
-	socket.addEvent('message', function(data){
+	socket.on('message', function(data){
 		alert('got some data' + data);
 	});
 	
-For an example, check out the chat [source](https://github.com/RosePad/Socket.IO-node/blob/master/test/chat.html).
+For an example, check out the chat [source](https://github.com/LearnBoost/Socket.IO-node/blob/master/test/chat.html).
 
-## Documentation 
+### Notes
 
-### io.Socket
+If you are serving you .swf from a other domain than socket.io.js you will need to change the WEB_SOCKET_SWF_LOCATION to the insecure version.
+
+	<script>WEB_SOCKET_SWF_LOCATION = '/path/to/WebSocketMainInsecure.swf';</script>
+
+The insecure version can be found [here](http://github.com/gimite/web-socket-js/blob/master/WebSocketMainInsecure.zip).
+
+### Documentation 
+
+#### io.Socket
 
 	new io.Socket(host, [options]);
 
-Options:
+##### Options:
+
+- *secure*
+
+		false
+	
+	Use secure connections
 
 - *port*
 
-		80
+		Current port or 80
 	
-	The port `socket.io` server is attached to
+	The port `socket.io` server is attached to (defaults to the document.location port).
 
 - *resource*
 
@@ -63,9 +92,9 @@ Options:
 
 - *transports*
 
-		['websocket', 'server-events', 'flashsocket', 'htmlfile', 'xhr-multipart', 'xhr-polling']
+		['websocket', 'flashsocket', 'htmlfile', 'xhr-multipart', 'xhr-polling', 'jsonp-polling']
 
-	A list of the transports to attempt to utilize (in order of preference)
+	A list of the transports to attempt to utilize (in order of preference).
 	
 - *transportOptions*
 	
@@ -78,11 +107,48 @@ Options:
 				
 	An object containing (optional) options to pass to each transport.
 
-Properties:
+- *rememberTransport*
+
+		true
+	
+	A boolean indicating if the utilized transport should be remembered in a cookie.
+
+- *connectTimeout*
+
+		5000
+	
+	The amount of miliseconds a transport has to create a connection before we consider it timed out.
+	
+- *tryTransportsOnConnectTimeout*
+
+		true
+
+	A boolean indicating if we should try other transports when the  connectTimeout occurs.
+	
+- *reconnect*
+
+		true
+
+	A boolean indicating if we should automatically reconnect if a connection is disconnected. 
+  
+- *reconnectionDelay*
+
+		500
+
+	The amount of milliseconds before we try to connect to the server again. We are using a exponential back off algorithm for the following reconnections, on each reconnect attempt this value will get multiplied (500 > 1000 > 2000 > 4000 > 8000).
+  
+
+- *maxReconnectionAttempts*
+
+		10
+
+	The amount of attempts should we make using the current transport to connect to the server? After this we will do one final attempt, and re-try with all enabled transport methods before we give up.
+
+##### Properties:
 
 - *options*
 
-	The passed in options combined with the defaults
+	The passed in options combined with the defaults.
 
 - *connected*
 
@@ -91,16 +157,20 @@ Properties:
 - *connecting*
 
 	Whether the socket is connecting or not.
+
+- *reconnecting*
+
+	Whether we are reconnecting or not.
 	
 - *transport*	
 
 	The transport instance.
 
-Methods:
+##### Methods:
 	
 - *connect*
 
-	Establishes a connection	
+	Establishes a connection.
 	
 - *send(message)*
 	
@@ -108,21 +178,32 @@ Methods:
 	
 - *disconnect*
 
-	Closes the connection
+	Closes the connection.
 	
-- *addEvent(event, λ)*
+- *on(event, λ)*
 
-	Adds a listener for the event *event*
+	Adds a listener for the event *event*.
 	
 - *removeEvent(event, λ)*
 
-	Removes the listener λ for the event *event*
+	Removes the listener λ for the event *event*.
 	
-Events:
+##### Events:
 
 - *connect*
 
-	Fired when the connection is established and the handshake successful
+	Fired when the connection is established and the handshake successful.
+	
+- *connecting(transport_type)*
+
+    Fired when a connection is attempted, passing the transport name.
+	
+- *connect_failed*
+
+    Fired when the connection timeout occurs after the last connection attempt.
+	This only fires if the `connectTimeout` option is set.
+	If the `tryTransportsOnConnectTimeout` option is set, this only fires once all
+	possible transports have been tried.
 	
 - *message(message)*
 	
@@ -136,15 +217,30 @@ Events:
 
 	Fired when the connection is considered disconnected.
 	
-## Credits
+- *reconnect(transport_type,reconnectionAttempts)*
 
-Guillermo Rauch [guillermo@rosepad.com]
+	Fired when the connection has been re-established. This only fires if the `reconnect` option is set.
 
-## License 
+- *reconnecting(reconnectionDelay,reconnectionAttempts)*
+
+	Fired when a reconnection is attempted, passing the next delay for the next reconnection.
+
+
+- *reconnect_failed*
+
+	Fired when all reconnection attempts have failed and we where unsucessfull in reconnecting to the server.  
+
+### Contributors
+
+Guillermo Rauch &lt;guillermo@learnboost.com&gt;
+
+Arnout Kazemier &lt;info@3rd-eden.com&gt;
+
+### License 
 
 (The MIT License)
 
-Copyright (c) 2009 RosePad &lt;dev@rosepad.com&gt;
+Copyright (c) 2010 LearnBoost &lt;dev@learnboost.com&gt;
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
